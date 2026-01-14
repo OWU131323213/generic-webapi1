@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>天使と悪魔の運命裁判</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'serif'; }
+        #ui { position: absolute; top: 20px; width: 100%; text-align: center; z-index: 100; }
+        .input-group { 
+            display: flex; gap: 10px; justify-content: center; 
+            background: rgba(0,0,0,0.8); padding: 15px; border-radius: 50px; 
+            width: fit-content; margin: 0 auto; border: 1px solid #555; 
+        }
+        .chat-boxes { 
+            position: absolute; bottom: 0; width: 100%; 
+            display: flex; justify-content: space-between; 
+            padding: 20px; box-sizing: border-box; 
+            background: linear-gradient(to top, rgba(0,0,0,1) 40%, rgba(0,0,0,0)); 
+            z-index: 110; pointer-events: none;
+            align-items: flex-end;
+        }
+        .box { 
+            width: 44%; background: rgba(10, 10, 10, 0.95); 
+            padding: 15px; border-radius: 15px; 
+            min-height: 80px; border: 1px solid #444; 
+            pointer-events: auto; transition: all 0.4s ease;
+            opacity: 0.5; transform: scale(0.85); font-size: 13px;
+        }
+        .box.winner-text { 
+            opacity: 1; transform: scale(1.05); 
+            font-size: 19px !important; font-weight: bold;
+            border-color: #eee; z-index: 120;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+        .angel-box { border-left: 6px solid #fff5b3; }
+        .devil-box { border-right: 6px solid #ff4d4d; text-align: right; }
+        input, select, button { padding: 10px 15px; border-radius: 20px; border: none; outline: none; }
+        button { background: #ffed8a; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div class="input-group">
+            <input type="date" id="birthday" value="2000-01-01">
+            <select id="category">
+                <option value="恋愛運">恋愛運</option>
+                <option value="金運">金運</option>
+                <option value="仕事運">仕事運</option>
+            </select>
+            <button onclick="ask()">運命を占う</button>
+        </div>
+    </div>
+
+    <div class="chat-boxes">
+        <div id="angelAns" class="box angel-box">天使：...</div>
+        <div id="devilAns" class="box devil-box">悪魔：...</div>
+    </div>
+
+    <script>
+        let angelScore = -1, devilScore = -1;
+        let particles = [];
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight, WEBGL);
+        }
+
+        class Particle {
+            constructor(x, y, type) {
+                this.pos = createVector(x + random(-30, 30), y + random(-30, 30), 150);
+                this.vel = p5.Vector.random3D().mult(random(3, 8));
+                this.lifespan = 255;
+                this.type = type;
+                this.sz = random(2, 6);
+            }
+            update() {
+                this.pos.add(this.vel);
+                this.vel.mult(0.95);
+                this.lifespan -= 5;
+            }
+            show() {
+                push();
+                translate(this.pos.x, this.pos.y, this.pos.z);
+                noStroke();
+                if (this.type === 'angel') {
+                    fill(255, 255, 200, this.lifespan);
+                    sphere(this.sz);
+                } else {
+                    fill(255, 200, 0, this.lifespan);
+                    rotateX(frameCount * 0.2);
+                    box(this.sz * 1.5);
+                }
+                pop();
+            }
+        }
+
+        function draw() {
+            let winner = "none";
+            if (angelScore >= 0 && devilScore >= 0) {
+                winner = (angelScore * 0.75) >= devilScore ? 'angel' : 'devil';
+                if (winner === 'angel') {
+                    document.getElementById('angelAns').classList.add('winner-text');
+                    document.getElementById('devilAns').classList.remove('winner-text');
+                } else {
+                    document.getElementById('devilAns').classList.add('winner-text');
+                    document.getElementById('angelAns').classList.remove('winner-text');
+                }
+            } else {
+                document.getElementById('angelAns').classList.remove('winner-text');
+                document.getElementById('devilAns').classList.remove('winner-text');
+            }
+
+            // --- 背景と演出の微調整 ---
+            if (winner === 'angel') {
+                // 天国のような明るいシアンブルー
+                background(135, 206, 250); 
+                // 神々しい強い白い光を当てる
+                ambientLight(255); 
+                pointLight(255, 255, 255, 0, -500, 200);
+            } else if (winner === 'devil') {
+                // 悪魔勝利：鮮烈な赤
+                background(220, 20, 0);
+                ambientLight(150);
+            } else {
+                // 待機中：幻想的な薄い金色
+                background(240, 220, 150); 
+                ambientLight(180);
+            }
+
+            ambientLight(180);
+            pointLight(255, 255, 255, 0, -200, 500);
+
+            let vOffset = -80;
+            let aX, dX, aSize, dSize, aAlpha, dAlpha;
+
+            if (winner === "none") {
+                aX = -width/6; dX = width/6;
+                aSize = 100; dSize = 100;
+                aAlpha = 200; dAlpha = 200;
+                vOffset += sin(frameCount * 0.05) * 15;
+            } else {
+                aX = (winner === 'angel' ? 0 : -width/4);
+                dX = (winner === 'devil' ? 0 : width/4);
+                aSize = (winner === 'angel' ? 180 : 40);
+                dSize = (winner === 'devil' ? 170 : 40);
+                aAlpha = (winner === 'angel' ? 255 : 30);
+                dAlpha = (winner === 'devil' ? 255 : 30);
+            }
+
+            // --- 天使 ---
+            push();
+            translate(aX, vOffset, 0);
+            rotateY(frameCount * 0.02);
+
+            // 輪の描画
+            push();
+            if (winner === 'angel') {
+                // 勝利時：少し金色を混ぜた白にして、空色とのコントラストを出す
+                stroke(255, 255, 150); 
+                strokeWeight(10); // かなり太くして目立たせる
+                // 輪の位置を調整（aSizeが大きくなっても頭の上に見えるように）
+                rotateX(PI/2); 
+                translate(0, 0, aSize * 0.8); 
+                torus(aSize * 0.65, 5); 
+            } else {
+                // 通常時・待機時
+                stroke(255, 255, 200, aAlpha); 
+                strokeWeight(4);
+                rotateX(PI/2); 
+                translate(0, 0, aSize * 0.7); 
+                torus(aSize * 0.55, 2);
+            }
+            pop();
+
+            // 本体
+            fill(240, 255, 255, aAlpha); noStroke();
+            sphere(aSize);
+            
+            if (winner === 'angel') {
+                for(let i=0; i<4; i++) particles.push(new Particle(aX, vOffset, 'angel'));
+            }
+            pop();
+
+            // --- 悪魔 ---
+            push();
+            translate(dX, vOffset, 0);
+            rotateX(frameCount * 0.03); 
+            rotateY(frameCount * 0.02);
+            
+            fill(40, 0, 0, dAlpha); stroke(255, 50, 50, dAlpha); strokeWeight(2);
+            box(dSize);
+            
+            // 角の修正：埋め込みを深くしてはみ出しを防ぐ
+            if (dSize > 25) {
+                fill(30, 0, 0, dAlpha); // 暗い赤
+                for (let s of [-1, 1]) {
+                    push();
+                    // 1. 箱の上面左右に配置
+                    translate(s * dSize * 0.3, -dSize * 0.5, 0);
+                    
+                    // 2. 外側に少し傾ける
+                    rotateZ(s * PI / 6);
+                    
+                    // 3. 向きの決定
+                    // rotateX(PI) を入れることで、底面を箱側に、先端を外側に向けます
+                    rotateX(PI);
+                    
+                    // 4. 突き出し位置の微調整
+                    // 埋め込みを深くしつつ、先端がしっかり出る位置 (-dSize * 0.4)
+                    translate(0, -dSize * -0.2, 0); 
+                    
+                    // 太さを 0.22、長さを 1.2 に抑えて「さかさま」を防ぎつつ鋭く
+                    cone(dSize * 0.22, dSize * 1.2); 
+                    pop();
+                }
+            }
+            if (winner === 'devil') {
+                for(let i=0; i<4; i++) particles.push(new Particle(dX, vOffset, 'devil'));
+            }
+            pop();
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].show();
+                if (particles[i].lifespan <= 0) particles.splice(i, 1);
+            }
+        }
+
+        async function ask() {
+            angelScore = -1; devilScore = -1;
+            document.getElementById('angelAns').innerText = "天界の光を集めています。奇跡を信じてお待ちください...";
+            document.getElementById('devilAns').innerText = "お前の運命の闇を覗き見ている。あまり焦るな、人間...";
+            try {
+                // 送信する文章に「2026年の運勢」であることを明記します
+                const promptText = `
+                    現在は2026年1月です。
+                    ユーザーの生年月日：${document.getElementById('birthday').value}
+                    占いたい項目：${document.getElementById('category').value}
+                    この情報に基づき、2026年の運勢を占ってください。
+                `;
+
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: promptText }) // 強化したプロンプトを送信
+                });
+                const data = await res.json();
+                processResponse(data.angel, 'angelAns', (s) => angelScore = s);
+                processResponse(data.devil, 'devilAns', (s) => devilScore = s);
+            } catch (e) { console.error(e); }
+        }
+
+        function processResponse(text, elementId, updateScore) {
+            document.getElementById(elementId).innerText = text.replace(/\[score:\d+\]/, "");
+            const match = text.match(/\[score:(\d+)\]/);
+            updateScore(match ? parseInt(match[1]) : 50);
+        }
+        function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+    </script>
+</body>
+</html>
