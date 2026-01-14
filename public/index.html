@@ -97,7 +97,7 @@
         function draw() {
             let winner = "none";
             if (angelScore >= 0 && devilScore >= 0) {
-                winner = (angelScore * 0.75) >= devilScore ? 'angel' : 'devil';
+                winner = (angelScore * 1) >= devilScore ? 'angel' : 'devil';
                 if (winner === 'angel') {
                     document.getElementById('angelAns').classList.add('winner-text');
                     document.getElementById('devilAns').classList.remove('winner-text');
@@ -230,6 +230,7 @@
             angelScore = -1; devilScore = -1;
             document.getElementById('angelAns').innerText = "天界の光を集めています。奇跡を信じてお待ちください...";
             document.getElementById('devilAns').innerText = "お前の運命の闇を覗き見ている。あまり焦るな、人間...";
+
             try {
                 // 送信する文章に「2026年の運勢」であることを明記します
                 const promptText = `
@@ -249,7 +250,6 @@
                 processResponse(data.devil, 'devilAns', (s) => devilScore = s);
             } catch (e) { console.error(e); }
         }
-
         function processResponse(text, elementId, updateScore) {
             document.getElementById(elementId).innerText = text.replace(/\[score:\d+\]/, "");
             const match = text.match(/\[score:(\d+)\]/);
